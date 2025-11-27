@@ -17,6 +17,8 @@
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build",
     "build:server": "vite build --config vite.config.server.ts",
+    "build:clean": "rm -rf dist && NODE_ENV=production npm run build:client -- --minify && npm run build:server",
+    "build:silent": "rm -rf dist && NODE_ENV=production npm run build:client -- --minify >/dev/null 2>&1 && npm run build:server >/dev/null 2>&1 && echo 'Build completed successfully!'",
     "start": "node dist/server/node-build.mjs",
     "test": "vitest --run",
     "format.fix": "prettier --write .",
