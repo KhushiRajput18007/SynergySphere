@@ -1,7 +1,9 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { handleDemo } from "./routes/demo";
+import { authRouter } from "./routes/auth.ts";
+import { projectsRouter } from "./routes/projects.ts";
+import { tasksRouter } from "./routes/tasks.ts";
 
 export function createServer() {
   const app = express();
@@ -11,13 +13,13 @@ export function createServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Example API routes
+  // API routes
+  app.use("/api/auth", authRouter);
+  app.use("/api/projects", projectsRouter);
+  app.use("/api/tasks", tasksRouter);
   app.get("/api/ping", (_req, res) => {
-    const ping = process.env.PING_MESSAGE ?? "ping";
-    res.json({ message: ping });
+    res.json({ message: "pong" });
   });
-
-  app.get("/api/demo", handleDemo);
 
   return app;
 }
