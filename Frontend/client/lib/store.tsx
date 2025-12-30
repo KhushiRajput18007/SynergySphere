@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from "react";
+import { apiRequest } from "./api-client.ts";
 function makeId() {
   return (
     Date.now().toString(36) +
@@ -288,7 +289,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       try {
         const parsed = JSON.parse(raw) as State;
         dispatch({ type: "hydrate", payload: parsed });
-      } catch {}
+      } catch { }
     }
   }, []);
 
@@ -305,18 +306,60 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 export function useStore() {
   const ctx = useContext(StoreContext);
   if (!ctx) throw new Error("useStore must be used within StoreProvider");
-  return ctx;
+  const { dispatch, selectors } = ctx;
+
+  const createProjectAsync = useCallback(async (data: any) => {
+    const user = selectors.currentUser();
+    if (!user) return;
+    const project = await apiRequest<Project>("POST", "/api/projects", { ...data, ownerId: user.id });
+    dispatch({ type: "hydrate", payload: { ...ctx.state, projects: { ...ctx.state.projects, [project.id]: project } } });
+    return project;
+  }, [ctx, dispatch, selectors]);
+
+  const createTaskAsync = useCallback(async (data: any) => {
+    const task = await apiRequest<Task>("POST", "/api/tasks", data);
+    dispatch({ type: "hydrate", payload: { ...ctx.state, tasks: { ...ctx.state.tasks, [task.id]: task } } });
+    return task;
+  }, [ctx, dispatch]);
+
+  const fetchProjectsAsync = useCallback(async () => {
+    const user = selectors.currentUser();
+    if (!user) return;
+    const projectsArr = await apiRequest<Project[]>("GET", `/api/projects?userId=${user.id}`);
+    const projectsMap = projectsArr.reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
+    dispatch({ type: "hydrate", payload: { ...ctx.state, projects: { ...ctx.state.projects, ...projectsMap } } });
+  }, [ctx, dispatch, selectors]);
+
+  return { ...ctx, createProjectAsync, createTaskAsync, fetchProjectsAsync };
 }
 
 export function useAuth() {
   const { selectors, dispatch } = useStore();
   const user = selectors.currentUser();
-  const login = useCallback((email: string, password: string) => dispatch({ type: "login", payload: { email, password } }), [dispatch]);
-  const register = useCallback(
-    (name: string, email: string, password: string) => dispatch({ type: "register", payload: { name, email, password } }),
-    [dispatch],
-  );
-  const logout = useCallback(() => dispatch({ type: "logout" }), [dispatch]);
+
+  const login = useCallback(async (email: string, password: string) => {
+    try {
+      const user = await apiRequest<User>("POST", "/api/auth/login", { email, password });
+      dispatch({ type: "hydrate", payload: { ...initialState, users: { [user.id]: user }, currentUserId: user.id } });
+    } catch (error) {
+      console.error("Login failed:", error);
+    }
+  }, [dispatch]);
+
+  const register = useCallback(async (name: string, email: string, password: string) => {
+    try {
+      const user = await apiRequest<User>("POST", "/api/auth/register", { name, email, password });
+      dispatch({ type: "hydrate", payload: { ...initialState, users: { [user.id]: user }, currentUserId: user.id } });
+    } catch (error) {
+      console.error("Registration failed:", error);
+    }
+  }, [dispatch]);
+
+  const logout = useCallback(() => {
+    dispatch({ type: "logout" });
+    localStorage.removeItem(LS_KEY);
+  }, [dispatch]);
+
   return { user, login, register, logout };
 }
 
