@@ -1,0 +1,32 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="primaryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#8b5cf6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0ea5e9;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Main sphere -->
+  <circle cx="16" cy="16" r="14" fill="url(#primaryGradient)" />
+  
+  <!-- Network nodes -->
+  <circle cx="16" cy="16" r="1.5" fill="#ffffff" opacity="0.9" />
+  <circle cx="16" cy="8" r="1.2" fill="url(#accentGradient)" />
+  <circle cx="24" cy="16" r="1.2" fill="url(#accentGradient)" />
+  <circle cx="16" cy="24" r="1.2" fill="url(#accentGradient)" />
+  <circle cx="8" cy="16" r="1.2" fill="url(#accentGradient)" />
+  
+  <!-- Connections -->
+  <g stroke="#ffffff" stroke-width="0.8" opacity="0.4">
+    <line x1="16" y1="16" x2="16" y2="8" />
+    <line x1="16" y1="16" x2="24" y2="16" />
+    <line x1="16" y1="16" x2="16" y2="24" />
+    <line x1="16" y1="16" x2="8" y2="16" />
+  </g>
+</svg>
