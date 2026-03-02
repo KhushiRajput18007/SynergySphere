@@ -10,6 +10,10 @@ import Project from "./pages/Project";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import Placeholder from "./pages/Placeholder";
+import Notifications from "./pages/Notifications";
+import Auth from "./pages/Auth";
+import Projects from "./pages/Projects";
+import Tasks from "./pages/Tasks";
 import { StoreProvider } from "./lib/store";
 import "./global.css";
 import "./lib/patches";
@@ -25,14 +29,15 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
             <Route path="/project/:id" element={<Project />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/projects" element={<Placeholder title="Projects" />} />
-            <Route path="/tasks" element={<Placeholder title="Tasks" />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/tasks" element={<Tasks />} />
             <Route path="/team" element={<Placeholder title="Team" />} />
             <Route path="/reports" element={<Placeholder title="Reports" />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
