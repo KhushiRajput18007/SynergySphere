@@ -14,11 +14,8 @@ const items = [
 export default function Sidebar() {
   const { pathname } = useLocation();
   return (
-    <aside className="hidden md:flex md:w-64 md:flex-col md:gap-4 md:border-r md:bg-card/40 md:p-4 md:[position:sticky] md:top-16 md:h-[calc(100vh-64px)]">
-      <div className="flex items-center gap-2 px-2">
-        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-teal-600 text-white font-semibold">SS</span>
-        <span className="font-semibold tracking-tight">SynergySphere</span>
-      </div>
+    <aside className="hidden md:flex md:w-64 md:flex-col md:gap-4 md:border-r md:bg-card/40 md:p-4 h-full">
+      <div className="flex items-center gap-2 px-2"></div>
       <nav className="mt-2 space-y-1">
         {items.map((it) => {
           const Icon = it.icon;
