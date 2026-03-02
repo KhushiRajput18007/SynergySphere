@@ -3,7 +3,8 @@ import { relations } from "drizzle-orm";
 
 export const priorityEnum = pgEnum("priority", ["low", "medium", "high"]);
 export const taskStatusEnum = pgEnum("status", ["todo", "inprogress", "done"]);
-export const notificationCategoryEnum = pgEnum("category", ["tasks", "messages", "team"]);
+export const membershipStatusEnum = pgEnum("membership_status", ["pending", "accepted", "declined"]);
+export const notificationCategoryEnum = pgEnum("category", ["tasks", "messages", "team", "invitation"]);
 
 export const users = pgTable("users", {
     id: uuid("id").primaryKey().defaultRandom(),
@@ -33,6 +34,7 @@ export const projects = pgTable("projects", {
 export const projectMembers = pgTable("project_members", {
     projectId: uuid("project_id").references(() => projects.id).notNull(),
     userId: uuid("user_id").references(() => users.id).notNull(),
+    status: membershipStatusEnum("status").default("pending").notNull(),
 }, (t) => ({
     pk: primaryKey({ columns: [t.projectId, t.userId] }),
 }));
