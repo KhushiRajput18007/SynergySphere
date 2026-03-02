@@ -1,5 +1,3 @@
-import Header from "../components/Header";
-import Sidebar from "../components/Sidebar";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
@@ -9,6 +7,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { idToInitials, useAuth, useStore } from "../lib/store";
 import { useRef, useState } from "react";
+import DashboardLayout from "../components/DashboardLayout";
 
 export default function Profile() {
   const { user } = useAuth();
@@ -25,10 +24,11 @@ export default function Profile() {
 
   if (!user) {
     return (
-      <div className="min-h-screen">
-        <Header />
-        <main className="mx-auto max-w-5xl px-4 py-8">Please sign in.</main>
-      </div>
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-20">
+          <p className="text-muted-foreground font-medium">Please sign in to view your profile.</p>
+        </div>
+      </DashboardLayout>
     );
   }
 
@@ -46,84 +46,97 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
-      <Header />
-      <div className="mx-auto grid max-w-7xl grid-cols-1 md:grid-cols-[256px_1fr] gap-6 px-4 py-6">
-        <Sidebar />
-        <main className="space-y-6">
-          <Card className="backdrop-blur">
-            <CardHeader>
-              <CardTitle>Profile Settings</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-6">
-              <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-center">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-16 w-16">
-                    {avatar ? <AvatarImage src={avatar} alt={name} /> : <AvatarFallback>{idToInitials(name || user.name)}</AvatarFallback>}
-                  </Avatar>
-                  <div>
-                    <div className="text-sm font-medium">Profile Picture</div>
-                    <div className="text-xs text-muted-foreground">Upload a new avatar or edit current</div>
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-bold tracking-tight">Your Profile</h1>
+          <p className="text-muted-foreground text-sm">Manage your personal information and security settings.</p>
+        </div>
+
+        <Card className="border-none shadow-xl bg-card/60 backdrop-blur-md">
+          <CardHeader className="border-b bg-muted/20">
+            <CardTitle className="text-lg">Account Information</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-8 p-6">
+            <div className="grid gap-4 sm:grid-cols-[auto_1fr] items-center">
+              <div className="flex items-center gap-6">
+                <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
+                  {avatar ? <AvatarImage src={avatar} alt={name} /> : <AvatarFallback className="text-xl font-bold">{idToInitials(name || user.name)}</AvatarFallback>}
+                </Avatar>
+                <div className="space-y-1">
+                  <div className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Profile Image</div>
+                  <div className="text-xs text-muted-foreground">PNG or JPG, max 10MB</div>
+                  <div className="pt-2">
+                    <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => onPick(e.target.files?.[0] || null)} />
+                    <Button
+                      size="sm"
+                      onClick={() => fileRef.current?.click()}
+                      className="bg-primary text-primary-foreground font-bold"
+                    >
+                      Choose New Image
+                    </Button>
                   </div>
                 </div>
-                <div className="sm:justify-self-start">
-                  <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => onPick(e.target.files?.[0] || null)} />
-                  <Button onClick={() => fileRef.current?.click()} className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-500 hover:to-fuchsia-500">Change Photo</Button>
-                </div>
               </div>
+            </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label>Full Name</Label>
-                  <Input value={name} onChange={(e) => setName(e.target.value)} />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Email Address</Label>
-                  <Input value={email} readOnly />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Role</Label>
-                  <Select value={role || "__none__"} onValueChange={(v) => setRole(v === "__none__" ? "" : v)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">Unspecified</SelectItem>
-                      <SelectItem value="Senior Product Manager">Senior Product Manager</SelectItem>
-                      <SelectItem value="Product Manager">Product Manager</SelectItem>
-                      <SelectItem value="Engineer">Engineer</SelectItem>
-                      <SelectItem value="Designer">Designer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label>Department</Label>
-                  <Input value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="Product Development" />
-                </div>
+            <div className="grid gap-6 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label className="text-xs font-bold uppercase tracking-tighter opacity-70">Display Name</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} className="bg-muted/10 border-muted-foreground/20" />
               </div>
+              <div className="grid gap-2">
+                <Label className="text-xs font-bold uppercase tracking-tighter opacity-70">Email Workspace</Label>
+                <Input value={email} readOnly className="bg-muted/30 border-none cursor-not-allowed opacity-60" />
+              </div>
+              <div className="grid gap-2">
+                <Label className="text-xs font-bold uppercase tracking-tighter opacity-70">Professional Role</Label>
+                <Select value={role || "__none__"} onValueChange={(v) => setRole(v === "__none__" ? "" : v)}>
+                  <SelectTrigger className="bg-muted/10 border-muted-foreground/20">
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Unspecified</SelectItem>
+                    <SelectItem value="Senior Product Manager">Senior Product Manager</SelectItem>
+                    <SelectItem value="Product Manager">Product Manager</SelectItem>
+                    <SelectItem value="Engineer">Engineer</SelectItem>
+                    <SelectItem value="Designer">Designer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label className="text-xs font-bold uppercase tracking-tighter opacity-70">Department</Label>
+                <Input value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="e.g. Product Development" className="bg-muted/10 border-muted-foreground/20" />
+              </div>
+            </div>
 
-              <div className="grid gap-3">
-                <div className="text-sm font-semibold">Security</div>
+            <div className="pt-4 border-t">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="text-sm font-bold tracking-tight">Login Security</div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">Regularly update your password to keep your workspace secure.</p>
+                </div>
                 <Dialog open={pwdOpen} onOpenChange={setPwdOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="outline">Change Password</Button>
+                    <Button variant="outline" className="font-bold border-muted-foreground/20">Change Password</Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="rounded-2xl border-none shadow-2xl">
                     <DialogHeader>
-                      <DialogTitle>Change Password</DialogTitle>
+                      <DialogTitle className="text-xl font-bold tracking-tight">Security Update</DialogTitle>
                     </DialogHeader>
-                    <div className="grid gap-3">
+                    <div className="grid gap-4 py-4">
                       <div className="grid gap-2">
-                        <Label>New Password</Label>
-                        <Input type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} />
+                        <Label className="text-xs font-bold uppercase opacity-70">New Secure Password</Label>
+                        <Input type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} className="bg-muted/10 border-muted-foreground/20" />
                       </div>
                       <div className="grid gap-2">
-                        <Label>Confirm Password</Label>
-                        <Input type="password" value={pwd2} onChange={(e) => setPwd2(e.target.value)} />
+                        <Label className="text-xs font-bold uppercase opacity-70">Verify Password</Label>
+                        <Input type="password" value={pwd2} onChange={(e) => setPwd2(e.target.value)} className="bg-muted/10 border-muted-foreground/20" />
                       </div>
                     </div>
                     <DialogFooter>
                       <Button
+                        className="w-full font-bold h-11"
                         onClick={() => {
                           if (pwd && pwd === pwd2) {
                             dispatch({ type: "updateUser", payload: { id: user.id, patch: { password: pwd } } });
@@ -134,20 +147,19 @@ export default function Profile() {
                         }}
                         disabled={!pwd || pwd !== pwd2}
                       >
-                        Update Password
+                        Commit Changes
                       </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
               </div>
-
-              <div className="flex justify-end">
-                <Button onClick={save} className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-500 hover:to-fuchsia-500">Save Changes</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </main>
+            </div>
+            <div className="flex justify-end pt-4">
+              <Button onClick={save} className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold h-11 px-8 shadow-lg shadow-violet-500/20">Update All Details</Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }
