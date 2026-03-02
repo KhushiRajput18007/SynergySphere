@@ -14,7 +14,7 @@ export type User = {
   id: ID;
   name: string;
   email: string;
-  password: string; // Demo only; do not use in production
+  password: string;
   createdAt: number;
   role?: string;
   department?: string;
@@ -29,7 +29,7 @@ export type Task = {
   title: string;
   description: string;
   assigneeId: ID | null;
-  dueDate: string | null; // ISO date string
+  dueDate: string | null;
   status: TaskStatus;
   createdAt: number;
   updatedAt: number;
@@ -41,11 +41,11 @@ export type Task = {
 export type Comment = {
   id: ID;
   projectId: ID;
-  taskId: ID | null; // null for project-level threads
+  taskId: ID | null;
   authorId: ID;
   content: string;
   createdAt: number;
-  parentId: ID | null; // for threaded replies
+  parentId: ID | null;
 };
 
 export type Project = {
@@ -69,7 +69,7 @@ export type Notification = {
   message: string;
   createdAt: number;
   read: boolean;
-  category?: "tasks" | "messages" | "team";
+  category?: "tasks" | "messages" | "team" | "invitation";
   projectId?: ID | null;
 };
 
@@ -259,7 +259,7 @@ function createSelectors(getState: () => State) {
       const s = getState();
       return s.currentUserId ? s.users[s.currentUserId] ?? null : null;
     },
-    userProjects: (userId: ID) => Object.values(getState().projects).filter((p) => p.memberIds.includes(userId)),
+    userProjects: (userId: ID) => Object.values(getState().projects).filter((p) => p.memberIds?.includes(userId)),
     projectById: (id: ID) => getState().projects[id] ?? null,
     projectMembers: (projectId: ID) => {
       const p = getState().projects[projectId];
@@ -322,15 +322,45 @@ export function useStore() {
     return task;
   }, [ctx, dispatch]);
 
+  const updateTaskAsync = useCallback(async (id: ID, patch: Partial<Task>) => {
+    const task = await apiRequest<Task>("PATCH", `/api/tasks/${id}`, patch);
+    dispatch({ type: "hydrate", payload: { ...ctx.state, tasks: { ...ctx.state.tasks, [task.id]: task } } });
+    return task;
+  }, [ctx, dispatch]);
+
+  const addMemberAsync = useCallback(async (projectId: ID, emailOrUserId: string) => {
+    await apiRequest("POST", `/api/projects/${projectId}/members`, { emailOrUserId });
+    // Refetch projects to get updated member list or just fetch members if we had that
+    const projectsArr = await apiRequest<Project[]>("GET", `/api/projects?userId=${ctx.state.currentUserId}`);
+    const projectsMap = projectsArr.reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
+    dispatch({ type: "hydrate", payload: { ...ctx.state, projects: { ...ctx.state.projects, ...projectsMap } } });
+  }, [ctx, dispatch]);
+
   const fetchProjectsAsync = useCallback(async () => {
     const user = selectors.currentUser();
     if (!user) return;
-    const projectsArr = await apiRequest<Project[]>("GET", `/api/projects?userId=${user.id}`);
-    const projectsMap = projectsArr.reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
-    dispatch({ type: "hydrate", payload: { ...ctx.state, projects: { ...ctx.state.projects, ...projectsMap } } });
+    try {
+      const projectsArr = await apiRequest<Project[]>("GET", `/api/projects?userId=${user.id}`);
+      const projectsMap = projectsArr.reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
+
+      // Also fetch tasks for these projects
+      const tasksArr = await Promise.all(projectsArr.map(p => apiRequest<Task[]>("GET", `/api/tasks?projectId=${p.id}`)));
+      const tasksMap = tasksArr.flat().reduce((acc, t) => ({ ...acc, [t.id]: t }), {});
+
+      dispatch({ type: "hydrate", payload: { ...ctx.state, projects: { ...ctx.state.projects, ...projectsMap }, tasks: { ...ctx.state.tasks, ...tasksMap } } });
+    } catch (err) {
+      console.error("Fetch projects error:", err);
+    }
   }, [ctx, dispatch, selectors]);
 
-  return { ...ctx, createProjectAsync, createTaskAsync, fetchProjectsAsync };
+  const respondToInvitation = useCallback(async (projectId: ID, action: 'accepted' | 'declined') => {
+    const user = selectors.currentUser();
+    if (!user) return;
+    await apiRequest("POST", `/api/projects/${projectId}/invitation`, { userId: user.id, action });
+    await fetchProjectsAsync();
+  }, [selectors, fetchProjectsAsync]);
+
+  return { ...ctx, createProjectAsync, createTaskAsync, updateTaskAsync, addMemberAsync, fetchProjectsAsync, respondToInvitation };
 }
 
 export function useAuth() {
@@ -338,21 +368,15 @@ export function useAuth() {
   const user = selectors.currentUser();
 
   const login = useCallback(async (email: string, password: string) => {
-    try {
-      const user = await apiRequest<User>("POST", "/api/auth/login", { email, password });
-      dispatch({ type: "hydrate", payload: { ...initialState, users: { [user.id]: user }, currentUserId: user.id } });
-    } catch (error) {
-      console.error("Login failed:", error);
-    }
+    const user = await apiRequest<User>("POST", "/api/auth/login", { email, password });
+    if (!user?.id) throw new Error("Invalid credentials");
+    dispatch({ type: "hydrate", payload: { ...initialState, users: { [user.id]: user }, currentUserId: user.id } });
   }, [dispatch]);
 
   const register = useCallback(async (name: string, email: string, password: string) => {
-    try {
-      const user = await apiRequest<User>("POST", "/api/auth/register", { name, email, password });
-      dispatch({ type: "hydrate", payload: { ...initialState, users: { [user.id]: user }, currentUserId: user.id } });
-    } catch (error) {
-      console.error("Registration failed:", error);
-    }
+    const user = await apiRequest<User>("POST", "/api/auth/register", { name, email, password });
+    if (!user?.id) throw new Error("Registration failed");
+    dispatch({ type: "hydrate", payload: { ...initialState, users: { [user.id]: user }, currentUserId: user.id } });
   }, [dispatch]);
 
   const logout = useCallback(() => {
