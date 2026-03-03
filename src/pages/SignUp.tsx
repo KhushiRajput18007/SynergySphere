@@ -1,16 +1,35 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import Logo from "@/components/Logo";
-import { Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
+import { useRegister } from "@/hooks/api/useAuth";
+import { toast } from "sonner";
 
 const SignUp = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ fullName: "", email: "", password: "", confirmPassword: "" });
+  const register = useRegister();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Will connect to backend later
-    console.log("Sign up:", formData);
+    
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    register.mutate(
+      {
+        name: formData.fullName,
+        email: formData.email,
+        password: formData.password,
+      },
+      {
+        onError: (error: any) => {
+          toast.error(error.response?.data?.error || "Registration failed");
+        },
+      }
+    );
   };
 
   return (
@@ -76,8 +95,18 @@ const SignUp = () => {
               required
             />
           </div>
-          <button type="submit" className="clay-button bg-primary text-primary-foreground w-full py-3 flex items-center justify-center gap-2 mt-2">
-            Create Account <ArrowRight className="w-4 h-4" />
+          <button 
+            type="submit" 
+            disabled={register.isPending}
+            className="clay-button bg-primary text-primary-foreground w-full py-3 flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
+          >
+            {register.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                Create Account <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </form>
 
