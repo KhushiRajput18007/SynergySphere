@@ -1,42 +1,43 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Smile, Paperclip, MoreVertical } from "lucide-react";
+import { Send, Smile, Paperclip, MoreVertical, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface ChatMessage {
-  id: string;
-  user: string;
-  content: string;
-  time: string;
-  isOwn: boolean;
-}
-
-const mockMessages: ChatMessage[] = [
-  { id: "1", user: "Sara", content: "Hey team! How's the progress on the dashboard?", time: "10:30 AM", isOwn: false },
-  { id: "2", user: "You", content: "Going well! I've completed the chart components.", time: "10:32 AM", isOwn: true },
-  { id: "3", user: "Ali", content: "Nice! I'm working on the sidebar navigation. Should be done by EOD.", time: "10:35 AM", isOwn: false },
-  { id: "4", user: "Fatima", content: "I need some help with the API integration. Can we have a quick sync?", time: "10:40 AM", isOwn: false },
-  { id: "5", user: "You", content: "Sure! Let's do a 15-min call at 2 PM.", time: "10:42 AM", isOwn: true },
-];
+import { useDiscussions, useSendMessage } from "@/hooks/api/useDiscussions";
+import { useProjects } from "@/hooks/api/useProjects";
+import { getStoredUser } from "@/hooks/api/useAuth";
+import { EmptyDiscussions } from "@/components/empty-states";
+import { format } from "date-fns";
+import { toast } from "sonner";
 
 const Discussion = () => {
-  const [messages, setMessages] = useState(mockMessages);
+  const { data: projects } = useProjects();
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const { data: messages, isLoading } = useDiscussions(selectedProjectId);
+  const sendMessage = useSendMessage();
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const currentUser = getStoredUser();
+
+  useEffect(() => {
+    if (projects && projects.length > 0 && !selectedProjectId) {
+      setSelectedProjectId(projects[0].id);
+    }
+  }, [projects, selectedProjectId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleSend = () => {
-    if (!input.trim()) return;
-    setMessages(prev => [...prev, {
-      id: String(Date.now()),
-      user: "You",
+    if (!input.trim() || !selectedProjectId) return;
+    sendMessage.mutate({
+      projectId: selectedProjectId,
       content: input,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      isOwn: true,
-    }]);
-    setInput("");
+    }, {
+      onSuccess: () => setInput(""),
+      onError: (error: any) => {
+        toast.error(error.response?.data?.error || "Failed to send message");
+      },
+    });
   };
 
   return (
@@ -44,7 +45,17 @@ const Discussion = () => {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-black">Discussion</h1>
-          <p className="text-sm text-muted-foreground font-medium">Mobile App Redesign • 5 members online</p>
+          <div className="flex items-center gap-2">
+            <select 
+              className="bg-transparent text-sm text-muted-foreground font-medium outline-none cursor-pointer"
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+            >
+              {projects?.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
         <button className="clay-card-inset w-10 h-10 flex items-center justify-center rounded-xl">
           <MoreVertical className="w-5 h-5" />
@@ -53,27 +64,40 @@ const Discussion = () => {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-4 mb-4">
-        {messages.map((msg) => (
-          <div key={msg.id} className={cn("flex", msg.isOwn ? "justify-end" : "justify-start")}>
-            <div className="flex items-end gap-2 max-w-[75%]">
-              {!msg.isOwn && (
-                <div className="clay-card w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0">
-                  {msg.user[0]}
-                </div>
-              )}
-              <div>
-                {!msg.isOwn && <span className="text-xs font-bold text-primary mb-1 block">{msg.user}</span>}
-                <div className={cn(
-                  "p-3 rounded-2xl text-sm font-medium",
-                  msg.isOwn ? "bg-primary text-primary-foreground rounded-br-sm" : "clay-card rounded-bl-sm"
-                )}>
-                  {msg.content}
-                </div>
-                <span className="text-xs text-muted-foreground mt-1 block">{msg.time}</span>
-              </div>
-            </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
-        ))}
+        ) : !messages || messages.length === 0 ? (
+          <EmptyDiscussions onStart={() => {}} />
+        ) : (
+          messages.map((msg) => {
+            const isOwn = msg.user.id === currentUser?.id;
+            return (
+              <div key={msg.id} className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
+                <div className="flex items-end gap-2 max-w-[75%]">
+                  {!isOwn && (
+                    <div className="clay-card w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0">
+                      {msg.user.name[0]}
+                    </div>
+                  )}
+                  <div>
+                    {!isOwn && <span className="text-xs font-bold text-primary mb-1 block">{msg.user.name}</span>}
+                    <div className={cn(
+                      "p-3 rounded-2xl text-sm font-medium",
+                      isOwn ? "bg-primary text-primary-foreground rounded-br-sm" : "clay-card rounded-bl-sm"
+                    )}>
+                      {msg.content}
+                    </div>
+                    <span className="text-xs text-muted-foreground mt-1 block">
+                      {format(new Date(msg.createdAt), "h:mm a")}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
         <div ref={bottomRef} />
       </div>
 
@@ -93,9 +117,16 @@ const Discussion = () => {
         <button className="clay-card-inset w-10 h-10 flex items-center justify-center rounded-xl shrink-0">
           <Smile className="w-4 h-4 text-muted-foreground" />
         </button>
-        <button onClick={handleSend}
-          className="clay-button bg-primary text-primary-foreground w-10 h-10 flex items-center justify-center shrink-0">
-          <Send className="w-4 h-4" />
+        <button 
+          onClick={handleSend}
+          disabled={sendMessage.isPending || !input.trim()}
+          className="clay-button bg-primary text-primary-foreground w-10 h-10 flex items-center justify-center shrink-0 disabled:opacity-50"
+        >
+          {sendMessage.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Send className="w-4 h-4" />
+          )}
         </button>
       </div>
     </div>
