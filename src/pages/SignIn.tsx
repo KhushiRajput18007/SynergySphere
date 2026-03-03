@@ -1,15 +1,22 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import Logo from "@/components/Logo";
-import { Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
+import { useLogin } from "@/hooks/api/useAuth";
+import { toast } from "sonner";
 
 const SignIn = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
+  const login = useLogin();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Sign in:", formData);
+    login.mutate(formData, {
+      onError: (error: any) => {
+        toast.error(error.response?.data?.error || "Login failed");
+      },
+    });
   };
 
   return (
@@ -56,8 +63,18 @@ const SignIn = () => {
           <div className="flex justify-end">
             <Link to="/forgot-password" className="text-sm text-primary font-bold hover:underline">Forgot Password?</Link>
           </div>
-          <button type="submit" className="clay-button bg-primary text-primary-foreground w-full py-3 flex items-center justify-center gap-2">
-            Sign In <ArrowRight className="w-4 h-4" />
+          <button 
+            type="submit" 
+            disabled={login.isPending}
+            className="clay-button bg-primary text-primary-foreground w-full py-3 flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {login.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                Sign In <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </form>
 
